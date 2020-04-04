@@ -8,6 +8,7 @@ import json
 import numpy as np
 import pandas as pd
 import database
+from emoji import UNICODE_EMOJI
 
 
 ##TO DO:##
@@ -148,25 +149,76 @@ def get_tweets_for_user(username):
 	
 	return alltweets
 
+def get_user_details(username):
+	user = api.get_user(username)
+	return user
+
+def is_emoji(s):
+	count = 0
+	for emoji in UNICODE_EMOJI:
+		count += s.count(emoji)
+		if count > 1:
+			return False	
+	return bool(count)
+
 if 	__name__ == "__main__":
 	
 	database.initialise()
 	twitter_client = TwitterClient()
 	tweet_analyser = TweetAnalyser()
-	users = ['realDonaldTrump']
+	users = ['Vitamin_D91', 'realDonaldTrump']
 	
 	
 	api = twitter_client.get_twitter_client_api()
 	all_tweets = pd.DataFrame([])
 	
 	for user in users:
+		user_details = get_user_details(user)
+		followers = user_details.followers_count
+		friends = user_details.friends_count
+		favourites = user_details.favourites_count
+		account_created = user_details.created_at
+		verified = user_details.verified
+
 		tweets = get_tweets_for_user(user)
-		for tweet in tweets:
+		tweet_count = len(tweets)
+
+		#persist
+		user_id = database.create_or_update_user(user, tweet_count, 0, followers, friends, favourites, account_created, verified)
+
+		retweet_count = 0
+		for tweet in tweets:			
 			content = tweet.text
-			date = tweet.created_at
-			likes = tweet.favorite_count
-			retweets = tweet.retweet_count
-			print("content = %s date = %s likes = %s retweets = %s"%(content,date,likes,retweets))
+			if (str.startswith(content, "RT")):
+				retweet_count = retweet_count + 1
+			else:
+				twit_id = tweet.id
+				likes = tweet.favorite_count
+				retweets = tweet.retweet_count
+				timestamp = tweet.created_at
+				hashtag_count = len(tweet.entities["hashtags"])
+				mention_count = len(tweet.entities["user_mentions"])
+				emoji_count = 0
+				for char in content:
+					if is_emoji(char):
+						emoji_count += 1
+				link_count = len(tweet.entities["urls"])
+				contains_media = "media" in tweet.entities
+				database.create_or_update_tweet(user_id, twit_id, content, likes, retweets, 0, timestamp, hashtag_count, mention_count, emoji_count, link_count, contains_media)
+
+
+			 	#persist
+
+		#persist again but with retweets
+		database.create_or_update_user(user, tweet_count, retweet_count, followers, friends, favourites, account_created, verified)
+		##print("%s: tweets: %s, retweets: %s, followers: %s, friends: %s, favourites: %s, account_created: %s, verified: %s"%(user, tweet_count, retweet_count, followers, friends, favourites, account_created, verified))
+
+		#update user with 
+
+			##if hasattr(tweet, 'extended_entities'):
+			#	print(tweet.extended_entities)
+
+				#print("content = %s date = %s likes = %s retweets = %s"%(content,date,likes,retweets))
 			
 			
 

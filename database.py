@@ -27,6 +27,7 @@ def initialise():
 			Id INTEGER PRIMARY KEY AUTOINCREMENT,
 			Username TEXT NOT NULL UNIQUE,
 			Tweets INTEGER NOT NULL DEFAULT 0,
+			Retweets INTEGER NOT NULL DEFAULT 0,
 			Followers INTEGER NOT NULL DEFAULT 0,
 			Friends INTEGER NOT NULL DEFAULT 0, 
 			Favourites INTEGER NOT NULL DEFAULT 0,
@@ -40,6 +41,7 @@ def initialise():
 	c.execute('''
 		CREATE TABLE IF NOT EXISTS Tweet ( 
 			Id INTEGER PRIMARY KEY AUTOINCREMENT,
+			TwitterId INTEGER NOT NULL,
 			UserId INTEGER NOT NULL, 
 			Content TEXT NOT NULL,
 			Likes INTEGER NOT NULL DEFAULT 0,
@@ -85,27 +87,83 @@ def check_tables_exist():
 	tweet_table_exists = tweet_table_result[0] == 1
 	return tweet_table_exists and user_table_exists
 
-def create_user(username, tweets, followers, friends, favourites,
+def user_exists(username):
+	conn = sqlite3.connect(dbname)
+	c = conn.cursor()
+
+	c.execute(''' 
+		SELECT COUNT(*) 
+		FROM User 
+		WHERE Username=?
+	''', [username])
+	user_result = c.fetchone()
+	conn.close()
+
+	user_exists = user_result[0] == 1
+	return user_exists
+
+def tweet_exists(twit_id):
+	conn = sqlite3.connect(dbname)
+	c = conn.cursor()
+
+	c.execute(''' 
+		SELECT COUNT(*) 
+		FROM Tweet 
+		WHERE TwitterId=?
+	''', [twit_id])
+	tweet_result = c.fetchone()
+	conn.close()
+
+	tweet_exists = tweet_result[0] == 1
+	return tweet_exists
+
+def create_or_update_user(username, tweets, retweets, followers, friends, favourites,
 				accountcreated, verified):
 	conn = sqlite3.connect(dbname)
 	c = conn.cursor()
 
-	c.execute( '''INSERT INTO User (Username, Tweets, Followers, Friends, Favourites, AccountCreated, Verified)
-				  VALUES (?, ?, ?, ?, ?, ?, ?)''', 
-				[username, tweets, followers, friends, favourites, accountcreated, verified])
+	exists = user_exists(username)
+
+	if exists:
+		c.execute('''UPDATE User
+			SET Tweets = ?, Retweets = ?, Followers = ?, Friends = ?, Favourites = ?, AccountCreated = ?, Verified = ?
+			WHERE Username = ?''',
+			[tweets, retweets, followers, friends, favourites, accountcreated, verified, username])
+	else:
+		c.execute( '''INSERT INTO User (Username, Tweets, Retweets, Followers, Friends, Favourites, AccountCreated, Verified)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', 
+			[username, tweets, retweets, followers, friends, favourites, accountcreated, verified])
+
 	conn.commit()
+
+	c.execute(''' 
+		SELECT Id 
+		FROM User 
+		WHERE Username=?
+	''', [username])
+	user_id = c.fetchone()[0]
+
 	conn.close()
+	return user_id	
 	
-def create_tweet(userid, content, likes, retweets, replies, timestamp, hashtags, mentions, emojis,
+def create_or_update_tweet(userid, twit_id, content, likes, retweets, replies, timestamp, hashtags, mentions, emojis,
 				 links, containsmedia):
 	conn = sqlite3.connect(dbname)
 	c = conn.cursor()
 
-	c.execute( '''INSERT INTO Tweet (UserId, Content, Likes, Retweets, Replies, Timestamp, Hashtags, 
-					Mentions, Emojis, Links, ContainsMedia)
-				  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', 
-				[userid, content, likes, retweets, replies, timestamp, hashtags, mentions, emojis,
-				 links, containsmedia])
+	exists = tweet_exists(twit_id)
+
+	if exists:
+		c.execute('''UPDATE Tweet
+			SET UserId = ?, Content = ?, Likes = ?, Retweets = ?, Replies = ?, Timestamp = ?, Hashtags = ?, 
+			Mentions = ?, Emojis = ?, Links = ?, ContainsMedia = ?''',
+			[userid, content, likes, retweets, replies, timestamp, hashtags, mentions, emojis, links, containsmedia])
+	else:
+		c.execute('''INSERT INTO Tweet (UserId, TwitterId, Content, Likes, Retweets, Replies, Timestamp, Hashtags, 
+			Mentions, Emojis, Links, ContainsMedia)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', 
+			[userid, twit_id, content, likes, retweets, replies, timestamp, hashtags, mentions, emojis, links, containsmedia])
+
 	conn.commit()
 	conn.close()
 
@@ -176,10 +234,12 @@ def drop_database():
 	conn.close()
 
 
-# drop_database()	
-# initialise()
+drop_database()	
+#initialise()
 # print(check_tables_exist())
-# create_user("vitamin_d", 69, 420, 1, 20, "2019-04-02", True)
+#create_or_update_user("vitamin_d", 69, 12, 420, 1, 20, "2019-04-02", True)
+#create_or_update_user("vitamin_d", 19581, 1231, 541452, 45245, 452452, "2019-12-11", False)
+
 # print(get_all_users())
 # create_tweet(1, "here is a tweet", 20, 2, 5, "2020-03-26:11:51:30", 2,
 # 			 0, 2, 1, False)
