@@ -9,6 +9,16 @@ import numpy as np
 import pandas as pd
 import database
 
+
+##TO DO:##
+##ACCESS ALL RELEVANT INFORMATION##
+##POPULATE DATABASE WITH TWITTER INFO##
+##APPLY NLP TO DATABASE##
+##GENERATE USER SCORE BASED ON CHARACTERISTICS##
+##GENERATE FINAL SCORE##
+##WEEP UNCONTROLLABLY##
+
+
 #list of twitter application keys
 consumer_key = "meHA7BPQcpjjQI5PAYMPJSVcG"
 consumer_secret = "jmOCuYgCzAGOgzElaXWME8CAlyhl1ePIwQEvOZs1O067nIFm7H"
@@ -113,43 +123,82 @@ class TweetAnalyser():
 		df = pd.DataFrame(data=[tweet.id for tweet in tweets], columns =['id'])
 
 		for tweet in tweets:
-			print(tweet._json)
-		print(type(tweets))
-		#df['name'] = np.array([tweet.user.screen_name for tweet in tweets]) 
-		df['content'] = np.array([tweet.text for tweet in tweets])
-		df['date'] = np.array([tweet.created_at for tweet in tweets])
-		df['likes'] = np.array([tweet.favorite_count for tweet in tweets])
-		df['retweets'] = np.array([tweet.retweet_count for tweet in tweets])
-		#df['replies'] = np.array([tweet.reply_count for tweet in tweets])
-		df['favourite'] = np.array([tweet.favorite_count for tweet in tweets])
-		#df['hashtags'] = np.array([tweet.entities.hashtags for tweet in tweets])
-		#df['links'] = np.array([tweet.entities.url for tweet in tweets])
-		#df['mentions'] = np.array([tweet.entities.user_mentions for tweet in tweets])
-		#df['mentions'] = np.array([tweet.entities.user_mentions for tweet in tweets])
-		
-		
-		
+			df['content'] = np.array([tweet.text for tweet in tweets])
+			df['date'] = np.array([tweet.created_at for tweet in tweets])
+			df['likes'] = np.array([tweet.favorite_count for tweet in tweets])
+			df['retweets'] = np.array([tweet.retweet_count for tweet in tweets])
+			#df['hashtags'] = np.array([tweet.entities["hashtags"][0] for tweet in tweets])
+			#df['links'] = np.array([tweet.entities.urls for tweet in tweets])
+			#df['mentions'] = np.array([tweet.entities.user_mentions for tweet in tweets])
+			#df['contains_media'] = np.array([tweet.entities.media for tweet in tweets])
+			#print(tweet.entities.keys())
 		
 		return df
+
+def get_tweets_for_user(username):
+	alltweets = []
+	new_tweets = api.user_timeline(screen_name=username, count=200)    
+	alltweets.extend(new_tweets)    
+	oldest = alltweets[-1].id - 1
+	
+	while len(new_tweets) > 0:
+		new_tweets = api.user_timeline(screen_name=username, count=200, max_id=oldest)
+		alltweets.extend(new_tweets)
+		oldest = alltweets[-1].id - 1
+	
+	return alltweets
 
 if 	__name__ == "__main__":
 	
 	database.initialise()
 	twitter_client = TwitterClient()
 	tweet_analyser = TweetAnalyser()
-	users = ['realDonaldTrump', 'Vitamin_D91', 'egoraptor']
+	users = ['realDonaldTrump']
 	
 	
 	api = twitter_client.get_twitter_client_api()
 	all_tweets = pd.DataFrame([])
 	
 	for user in users:
-		tweets = api.user_timeline(screen_name=user, count=10)
-		df = tweet_analyser.tweets_to_data_frame(tweets)
-		pd.set_option('display.max_colwidth',-1)
-		#print(df.head(10))
-		all_tweets = all_tweets.append(df)
+		tweets = get_tweets_for_user(user)
+		for tweet in tweets:
+			content = tweet.text
+			date = tweet.created_at
+			likes = tweet.favorite_count
+			retweets = tweet.retweet_count
+			print("content = %s date = %s likes = %s retweets = %s"%(content,date,likes,retweets))
+			
+			
+
+
+		# tweets = api.user_timeline(screen_name=user, count=10)
+		# df = tweet_analyser.tweets_to_data_frame(tweets)
+		# pd.set_option('display.max_colwidth',-1)
+		# #print(df.head(10))
+		# all_tweets = all_tweets.append(df)
 		
+	##PRINT HASHTAGS IF HASHTAGS > 0##	
+	# for tweet in tweets:
+	# 		detail = api.get_status(tweet.id)
+	# 		if len(detail.entities["hashtags"]) > 0:
+	# 				print(detail.entities["hashtags"][0]["text"])
+
+	##PRINT URL IF URLS >0##
+	# for tweet in tweets:
+	# 	detail = api.get_status(tweet.id)
+	# 	if len(detail.entities["urls"]) > 0:
+	# 		print(detail.entities["urls"][0])
+
+	##PRINT USER_MENTIONS IF MENTIONS > 0##
+	# for tweet in tweets:
+	# 	detail = api.get_status(tweet.id)
+	# 	if len(detail.entities["user_mentions"]) > 0:
+	# 		print(detail.entities["user_mentions"][0])
+
+	# for tweet in tweets:
+	# 	detail = api.get_status(tweet.id)
+	# 	if len(detail.entities["media"]) > 0:
+	# 		print(detail.entities["media"][0])
 	
 	#shows what can be extracted from tweets#
 	#print(dir(tweets[0]))
@@ -162,10 +211,17 @@ if 	__name__ == "__main__":
 	with open('tweetsTest.json','a') as outfile:
 		outfile.write(all_tweets_json)
 		outfile.close
-		
-	
-	
-	
+
+
+		##Getting tweet from user##
+		# twitter_client = TwitterClient('Vitamin_D91')
+		# my_tweets = (twitter_client.get_user_timeline_tweets(3200))
+		# for i in range(len(my_tweets)):
+		# 		print(i + 1, my_tweets[i])
+
+
+			
+
 		#examples for using classes 
 		
 		#hash_tag_list = ["donald trump"]
