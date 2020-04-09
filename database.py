@@ -1,12 +1,5 @@
 import sqlite3
 
-#CREATE TABLES
-#ENSURE TABLES CREATED 
-#INSERT USER VALUES
-#INSERT TWEET VALUES
-#GET ALL TWEETS
-#GET ALL USERS
-#UPDATE TWEET SENTIMENT
 #UPDATE TWEET SCORE
 #UPDATE USER SCORE
 #UPDATE USER TOTALSCORE
@@ -46,7 +39,6 @@ def initialise():
 			Content TEXT NOT NULL,
 			Likes INTEGER NOT NULL DEFAULT 0,
 			Retweets INTEGER NOT NULL DEFAULT 0,
-			Replies INTEGER NOT NULL DEFAULT 0, 
 			Timestamp DATETIME NOT NULL,
 			Hashtags INTEGER NOT NULL DEFAULT 0,
 			Mentions INTEGER NOT NULL DEFAULT 0,
@@ -54,6 +46,7 @@ def initialise():
 			Links INTEGER NOT NULL DEFAULT 0,
 			ContainsMedia BOOLEAN NOT NULL DEFAULT 0,
 			Sentiment TEXT,
+			Subjectivity REAL,
 			Score REAL,
 			FOREIGN KEY (UserId) 
 				REFERENCES User (Id)
@@ -117,22 +110,14 @@ def tweet_exists(twit_id):
 	tweet_exists = tweet_result[0] == 1
 	return tweet_exists
 
-def create_or_update_user(username, tweets, retweets, followers, friends, favourites,
+def create_user(username, tweets, retweets, followers, friends, favourites,
 				accountcreated, verified):
 	conn = sqlite3.connect(dbname)
 	c = conn.cursor()
 
-	exists = user_exists(username)
-
-	if exists:
-		c.execute('''UPDATE User
-			SET Tweets = ?, Retweets = ?, Followers = ?, Friends = ?, Favourites = ?, AccountCreated = ?, Verified = ?
-			WHERE Username = ?''',
-			[tweets, retweets, followers, friends, favourites, accountcreated, verified, username])
-	else:
-		c.execute( '''INSERT INTO User (Username, Tweets, Retweets, Followers, Friends, Favourites, AccountCreated, Verified)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', 
-			[username, tweets, retweets, followers, friends, favourites, accountcreated, verified])
+	c.execute( '''INSERT INTO User (Username, Tweets, Retweets, Followers, Friends, Favourites, AccountCreated, Verified)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', 
+					[username, tweets, retweets, followers, friends, favourites, accountcreated, verified])
 
 	conn.commit()
 
@@ -146,23 +131,14 @@ def create_or_update_user(username, tweets, retweets, followers, friends, favour
 	conn.close()
 	return user_id	
 	
-def create_or_update_tweet(userid, twit_id, content, likes, retweets, replies, timestamp, hashtags, mentions, emojis,
+def create_tweet(userid, twit_id, content, likes, retweets, timestamp, hashtags, mentions, emojis,
 				 links, containsmedia):
 	conn = sqlite3.connect(dbname)
 	c = conn.cursor()
-
-	exists = tweet_exists(twit_id)
-
-	if exists:
-		c.execute('''UPDATE Tweet
-			SET UserId = ?, Content = ?, Likes = ?, Retweets = ?, Replies = ?, Timestamp = ?, Hashtags = ?, 
-			Mentions = ?, Emojis = ?, Links = ?, ContainsMedia = ?''',
-			[userid, content, likes, retweets, replies, timestamp, hashtags, mentions, emojis, links, containsmedia])
-	else:
-		c.execute('''INSERT INTO Tweet (UserId, TwitterId, Content, Likes, Retweets, Replies, Timestamp, Hashtags, 
-			Mentions, Emojis, Links, ContainsMedia)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', 
-			[userid, twit_id, content, likes, retweets, replies, timestamp, hashtags, mentions, emojis, links, containsmedia])
+	c.execute('''INSERT INTO Tweet (UserId, TwitterId, Content, Likes, Retweets, Timestamp, Hashtags, 
+				Mentions, Emojis, Links, ContainsMedia)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', 
+				[userid, twit_id, content, likes, retweets, timestamp, hashtags, mentions, emojis, links, containsmedia])
 
 	conn.commit()
 	conn.close()
@@ -186,13 +162,23 @@ def get_all_users():
 	users = c.fetchall()
 	conn.close()
 	return users
+
+def update_user_retweets(user_id, retweet_count):
+	conn = sqlite3.connect(dbname)
+	conn.row_factory = sqlite3.Row
+	c = conn.cursor()
+
+	c.execute("UPDATE User SET Retweets = ? WHERE Id = ?", [retweet_count, user_id])
+	conn.commit()
+	conn.close()
 	
-def update_tweet_sentiment(tweetid, sentiment):
+	
+def update_tweet_sentiment(tweetid, sentiment, subjectivity):
 	conn = sqlite3.connect(dbname)
 	conn.row_factory = sqlite3.Row
 	c = conn.cursor()
 	
-	c.execute("UPDATE Tweet SET Sentiment = ? WHERE Id = ?", [sentiment, tweetid])
+	c.execute("UPDATE Tweet SET Sentiment = ?, Subjectivity = ? WHERE Id = ?", [sentiment, subjectivity, tweetid])
 	conn.commit()
 	conn.close()
 
@@ -223,6 +209,87 @@ def update_user_total_score(userid, totalscore):
 	conn.commit()
 	conn.close()
 
+#Average tweets per day of user
+def average_tweets_per_day(userid):
+	conn = sqlite3.connect(dbname)
+	conn.row_factory = sqlite3.Row
+	c = conn.cursor()
+
+	c.execute('''SELECT AVG(TweetsOnDay) AS AvgTweetsPerDay
+					FROM
+					(
+						SELECT UserId, DATE(Timestamp) AS Day, COUNT(*) AS TweetsOnDay
+						FROM Tweet
+						GROUP BY UserId, Day
+					)
+					WHERE UserId = ?
+					GROUP BY UserId''', [userid])
+				
+	average_tweets = c.fetchone()
+	conn.close()
+	return average_tweets
+
+#Average score of user tweets
+def average_tweet_score(userid):
+	conn = sqlite3.connect(dbname)
+	conn.row_factory = sqlite3.Row
+	c = conn.cursor()
+
+	c.execute('''SELECT UserId, ROUND(AVG(score), 0) AS "AverageTweetScore"
+				FROM Tweet
+				WHERE UserId = ?
+				GROUP BY UserId''', [userid])
+				
+	average_tweet_score = c.fetchone()
+	conn.close()
+	return average_tweet_score
+
+#Get average likes for all positive tweets
+def get_average_likes_for_positive_tweets():
+	conn = sqlite3.connect(dbname)
+	conn.row_factory = sqlite3.Row
+	c = conn.cursor()
+
+	c.execute('''SELECT ROUND(AVG(Likes),0) AS "AverageLikes"
+				 FROM Tweet 
+				 WHERE Sentiment = "pos" ''')
+ 
+	average_likes = c.fetchone()
+	conn.close()
+	return average_likes
+
+
+#Get average retweets for positive tweets
+def get_average_retweets_for_positive_tweets():
+	conn = sqlite3.connect(dbname)
+	conn.row_factory = sqlite3.Row
+	c = conn.cursor()
+
+	c.execute('''SELECT ROUND(AVG(Retweets),0) AS "AverageRetweets"
+				 FROM Tweet 
+				 WHERE Sentiment = "pos" ''')
+ 
+	average_retweets = c.fetchone()
+	conn.close()
+	return average_retweets
+
+
+#Get average length of positive tweet content
+def get_average_length_of_positive_tweets():
+	conn = sqlite3.connect(dbname)
+	conn.row_factory = sqlite3.Row
+	c = conn.cursor()
+
+	c.execute('''SELECT ROUND(AVG(length(content)),0) AS "AverageLength"
+				 FROM Tweet 
+				 WHERE Sentiment = "pos" ''')
+ 
+	average_length = c.fetchone()
+	conn.close()
+	return average_length
+	
+
+#Drop database tables
 def drop_database():
 	conn = sqlite3.connect(dbname)
 	conn.row_factory = sqlite3.Row
@@ -233,28 +300,4 @@ def drop_database():
 	conn.commit()
 	conn.close()
 
-
-drop_database()	
-#initialise()
-# print(check_tables_exist())
-#create_or_update_user("vitamin_d", 69, 12, 420, 1, 20, "2019-04-02", True)
-#create_or_update_user("vitamin_d", 19581, 1231, 541452, 45245, 452452, "2019-12-11", False)
-
-# print(get_all_users())
-# create_tweet(1, "here is a tweet", 20, 2, 5, "2020-03-26:11:51:30", 2,
-# 			 0, 2, 1, False)
-# print(get_all_tweets())
-# #TWITTER DATETIME DISPLAYS AS: "THU MAR 26 11:51:30 +0000 2020"
-
-# update_tweet_sentiment(1, "Positive")
-# print(get_all_tweets()[0]["sentiment"])
-
-# update_tweet_score(1, 20.50)
-# print(get_all_tweets()[0]["score"])
-
-# update_user_score(1, 50.20)
-# print(get_all_users()[0]["score"])
-
-# update_user_total_score(1, 100.00)
-# print(get_all_users()[0]["totalscore"])
 

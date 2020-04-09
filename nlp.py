@@ -26,20 +26,29 @@ test = [
 ]
 
 
-cl = NaiveBayesClassifier(train)
-
-print(cl.classify("this is an amazing library!"))
-print(cl.classify("I really don't like this at all"))
-
-print(cl.accuracy(test))
 
 
-def calculate_tweet_classification(content)
-    tweet_classification = content.classification
+def classify_tweets():
+    tweets = database.get_all_tweets()
+    for tweet in tweets:
+        sentiment = calculate_tweet_classification(tweet["content"])
+        subjectivity = calculate_tweet_subjectivity(tweet["content"]) 
+        database.update_tweet_sentiment(tweet["id"], sentiment, subjectivity)
 
-def calculate_tweet_sentiment(content):
-    tweet_sentiment = content.sentiment
-
-def calculate_tweet_polarity(conent):
-    tweet_polarity = content.polarity
     
+
+def calculate_tweet_classification(content):
+    tweet_classification = cl.classify(content)
+    return tweet_classification
+    
+
+
+# 0.0 = very objective 1.0 = very subjective 
+def calculate_tweet_subjectivity(content):
+    tweet_content = TextBlob(content)
+    tweet_subjectivity = tweet_content.sentiment.subjectivity
+    print(tweet_subjectivity)
+    return tweet_subjectivity
+    
+cl = NaiveBayesClassifier(train)
+classify_tweets()

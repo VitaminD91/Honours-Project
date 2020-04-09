@@ -12,12 +12,9 @@ from emoji import UNICODE_EMOJI
 
 
 ##TO DO:##
-##ACCESS ALL RELEVANT INFORMATION##
-##POPULATE DATABASE WITH TWITTER INFO##
-##APPLY NLP TO DATABASE##
 ##GENERATE USER SCORE BASED ON CHARACTERISTICS##
 ##GENERATE FINAL SCORE##
-##WEEP UNCONTROLLABLY##
+
 
 
 #list of twitter application keys
@@ -128,11 +125,7 @@ class TweetAnalyser():
 			df['date'] = np.array([tweet.created_at for tweet in tweets])
 			df['likes'] = np.array([tweet.favorite_count for tweet in tweets])
 			df['retweets'] = np.array([tweet.retweet_count for tweet in tweets])
-			#df['hashtags'] = np.array([tweet.entities["hashtags"][0] for tweet in tweets])
-			#df['links'] = np.array([tweet.entities.urls for tweet in tweets])
-			#df['mentions'] = np.array([tweet.entities.user_mentions for tweet in tweets])
-			#df['contains_media'] = np.array([tweet.entities.media for tweet in tweets])
-			#print(tweet.entities.keys())
+		
 		
 		return df
 
@@ -161,131 +154,72 @@ def is_emoji(s):
 			return False	
 	return bool(count)
 
-if 	__name__ == "__main__":
+def get_author_from_tweet_id(id):
+	tweet = api.statuses_lookup(id)
+	print(tweet.user.screen_name)
+
+twitter_client = TwitterClient()
+api = twitter_client.get_twitter_client_api()
+get_author_from_tweet_id(['938211896431448064'])
+
+
+# if 	__name__ == "__main__":
 	
-	database.initialise()
-	twitter_client = TwitterClient()
-	tweet_analyser = TweetAnalyser()
-	users = ['Vitamin_D91', 'realDonaldTrump']
+# 	database.drop_database()
+# 	database.initialise()
+# 	twitter_client = TwitterClient()
+# 	tweet_analyser = TweetAnalyser()
+# 	users = ['Vitamin_D91', 'realDonaldTrump']
+
 	
 	
-	api = twitter_client.get_twitter_client_api()
-	all_tweets = pd.DataFrame([])
+#   api = twitter_client.get_twitter_client_api()
+# 	all_tweets = pd.DataFrame([])
 	
-	for user in users:
-		user_details = get_user_details(user)
-		followers = user_details.followers_count
-		friends = user_details.friends_count
-		favourites = user_details.favourites_count
-		account_created = user_details.created_at
-		verified = user_details.verified
+# 	for user in users:
+# 		user_details = get_user_details(user)
+# 		followers = user_details.followers_count
+# 		friends = user_details.friends_count
+# 		favourites = user_details.favourites_count
+# 		account_created = user_details.created_at
+# 		verified = user_details.verified
 
-		tweets = get_tweets_for_user(user)
-		tweet_count = len(tweets)
+# 		tweets = get_tweets_for_user(user)
+# 		tweet_count = len(tweets)
 
-		#persist
-		user_id = database.create_or_update_user(user, tweet_count, 0, followers, friends, favourites, account_created, verified)
+# 		#persist
+# 		user_id = database.create_user(user, tweet_count, 0, followers, friends, favourites, account_created, verified)
 
-		retweet_count = 0
-		for tweet in tweets:			
-			content = tweet.text
-			if (str.startswith(content, "RT")):
-				retweet_count = retweet_count + 1
-			else:
-				twit_id = tweet.id
-				likes = tweet.favorite_count
-				retweets = tweet.retweet_count
-				timestamp = tweet.created_at
-				hashtag_count = len(tweet.entities["hashtags"])
-				mention_count = len(tweet.entities["user_mentions"])
-				emoji_count = 0
-				for char in content:
-					if is_emoji(char):
-						emoji_count += 1
-				link_count = len(tweet.entities["urls"])
-				contains_media = "media" in tweet.entities
-				database.create_or_update_tweet(user_id, twit_id, content, likes, retweets, 0, timestamp, hashtag_count, mention_count, emoji_count, link_count, contains_media)
-
-
-			 	#persist
-
-		#persist again but with retweets
-		database.create_or_update_user(user, tweet_count, retweet_count, followers, friends, favourites, account_created, verified)
-		##print("%s: tweets: %s, retweets: %s, followers: %s, friends: %s, favourites: %s, account_created: %s, verified: %s"%(user, tweet_count, retweet_count, followers, friends, favourites, account_created, verified))
-
-		#update user with 
-
-			##if hasattr(tweet, 'extended_entities'):
-			#	print(tweet.extended_entities)
-
-				#print("content = %s date = %s likes = %s retweets = %s"%(content,date,likes,retweets))
-			
-			
+# 		retweet_count = 0
+# 		for tweet in tweets:			
+# 			content = tweet.text
+# 			if (str.startswith(content, "RT")):
+# 				retweet_count = retweet_count + 1
+# 			else:
+# 				twit_id = tweet.id
+# 				likes = tweet.favorite_count
+# 				retweets = tweet.retweet_count
+# 				timestamp = tweet.created_at
+# 				hashtag_count = len(tweet.entities["hashtags"])
+# 				mention_count = len(tweet.entities["user_mentions"])
+# 				emoji_count = 0
+# 				for char in content:
+# 					if is_emoji(char):
+# 						emoji_count += 1
+# 				link_count = len(tweet.entities["urls"])
+# 				contains_media = "media" in tweet.entities
+# 				database.create_tweet(user_id, twit_id, content, likes, retweets, timestamp, hashtag_count, mention_count, emoji_count, link_count, contains_media)
 
 
-		# tweets = api.user_timeline(screen_name=user, count=10)
-		# df = tweet_analyser.tweets_to_data_frame(tweets)
-		# pd.set_option('display.max_colwidth',-1)
-		# #print(df.head(10))
-		# all_tweets = all_tweets.append(df)
+
+# 		#persist again but with retweets
+# 		database.update_user_retweets(user_id, retweet_count)
 		
-	##PRINT HASHTAGS IF HASHTAGS > 0##	
-	# for tweet in tweets:
-	# 		detail = api.get_status(tweet.id)
-	# 		if len(detail.entities["hashtags"]) > 0:
-	# 				print(detail.entities["hashtags"][0]["text"])
 
-	##PRINT URL IF URLS >0##
-	# for tweet in tweets:
-	# 	detail = api.get_status(tweet.id)
-	# 	if len(detail.entities["urls"]) > 0:
-	# 		print(detail.entities["urls"][0])
-
-	##PRINT USER_MENTIONS IF MENTIONS > 0##
-	# for tweet in tweets:
-	# 	detail = api.get_status(tweet.id)
-	# 	if len(detail.entities["user_mentions"]) > 0:
-	# 		print(detail.entities["user_mentions"][0])
-
-	# for tweet in tweets:
-	# 	detail = api.get_status(tweet.id)
-	# 	if len(detail.entities["media"]) > 0:
-	# 		print(detail.entities["media"][0])
+# 	all_tweets_json = all_tweets.to_json(orient='records')
 	
-	#shows what can be extracted from tweets#
-	#print(dir(tweets[0]))
-	#print(tweets[0].retweet_count)
-	
-	#print(dir(tweets[0])) 
-	#print(all_tweets.to_json(orient='records'))
-	all_tweets_json = all_tweets.to_json(orient='records')
-	
-	with open('tweetsTest.json','a') as outfile:
-		outfile.write(all_tweets_json)
-		outfile.close
+# 	with open('tweetsTest.json','a') as outfile:
+# 		outfile.write(all_tweets_json)
+# 		outfile.close
 
 
-		##Getting tweet from user##
-		# twitter_client = TwitterClient('Vitamin_D91')
-		# my_tweets = (twitter_client.get_user_timeline_tweets(3200))
-		# for i in range(len(my_tweets)):
-		# 		print(i + 1, my_tweets[i])
-
-
-			
-
-		#examples for using classes 
-		
-		#hash_tag_list = ["donald trump"]
-		#fetched_tweet_filename = "tweets.json"
-		
-		#Specified user and number of tweets from Cursor
-		#twitter_client = TwitterClient('realDonaldTrump')
-		#print(twitter_client.get_user_timeline_tweets(1))
-		
-		#twitter_streamer = TwitterStreamer()
-		#twitter_streamer.stream_tweets(fetched_tweet_filename, hash_tag_list)
-
-	
-	
-	
