@@ -47,8 +47,8 @@ def calculate_tweet_classification(content):
 def calculate_tweet_subjectivity(content):
     tweet_content = TextBlob(content)
     tweet_subjectivity = tweet_content.sentiment.subjectivity
-    print(tweet_subjectivity)
     return tweet_subjectivity
     
 cl = NaiveBayesClassifier(train)
 classify_tweets()
+print("NLP Complete")

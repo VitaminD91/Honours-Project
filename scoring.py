@@ -40,14 +40,12 @@ def calculate_user_score():
         
         database.update_user_score(user["id"], user_score)
 
-        print("user score = " + str(user_score))
         return user_score
 
 #Calculate the score for each tweet a user has made
 def calculate_tweet_score():
 
     tweets = database.get_all_tweets()
-    print(len(tweets))
 
     #get average likes for use
     average_result = database.get_average_likes_for_positive_tweets()
@@ -119,7 +117,6 @@ def calculate_total_score():
         average_tweet_score = score_result["AverageTweetScore"]
 
         total_score = (user["score"] + average_tweet_score) / 2
-        print(total_score) 
         database.update_user_total_score(user["id"], total_score)
 
 
@@ -127,3 +124,4 @@ def calculate_total_score():
 calculate_user_score()
 calculate_tweet_score()
 calculate_total_score()
+print("Scoring Complete")
