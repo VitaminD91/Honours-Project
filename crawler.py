@@ -12,20 +12,7 @@ import database
 from emoji import UNICODE_EMOJI
 from tweetIds import tweet_ids
 
-
-##TO DO:##
-##GENERATE USER SCORE BASED ON CHARACTERISTICS##
-##GENERATE FINAL SCORE##
-
-
-
-
-#list of twitter application keys
-consumer_key = "meHA7BPQcpjjQI5PAYMPJSVcG"
-consumer_secret = "jmOCuYgCzAGOgzElaXWME8CAlyhl1ePIwQEvOZs1O067nIFm7H"
-access_token = "1183756062710751232-9mT3KIzwJfn3upsioWEl9Lmg3xvRYu"
-access_token_secret = "Zz6252rtCLx5vJBu1Tp7MBnvepvDu1G0XLcYJ9ektsuxS"
-
+# # Keys Removed - To Be Added From External File # #
 
 # # # # # TWITTER CLIENT # # # # #
 
