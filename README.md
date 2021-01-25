@@ -32,5 +32,5 @@ has been active, the number of followers for an account and the number of accoun
 and various other factors which are outlined within the dissertation. These factors were decided based on what seemed to be the most common 
 similarities in all malicious accounts based on various studies. 
 
-![alt text](https://github.com/VitaminD91/Honours-Project/blob/master/System Architecture Diagram.jpg?raw=true)
+![alt text](https://github.com/VitaminD91/Honours-Project/blob/master/System-Architecture-Diagram.jpg?raw=true)
 
